@@ -1,0 +1,8 @@
+streamlit>=1.32.0
+kiteconnect>=4.2.0
+fyers-apiv3>=3.0.0
+pyotp>=2.9.0
+pandas>=2.0.0
+numpy>=1.26.0
+pytz>=2024.1
+requests>=2.31.0
