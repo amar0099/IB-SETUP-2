@@ -331,7 +331,7 @@ with tab_dash:
     _pill(cc1, "Fyers",       fy_ok, "Connected")
     _pill(cc2, "Zerodha",     zd_ok, "Connected")
     _pill(cc3, "Live feed",   ws_ok, "Live", "Offline")
-    _pill(cc4, "Scheduler",   sched and getattr(sched, 'running', False), "Running")
+    _pill(cc4, "Scheduler",   sched is not None, (sched, 'running', False), "Running")
 
     login_err = getattr(sched, 'login_error', '') if sched else ''
     if login_err:
