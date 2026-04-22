@@ -288,7 +288,7 @@ if not creds_ok:
         st.session_state.zd_totp_key = zc5.text_input("TOTP secret",value=st.session_state.zd_totp_key, placeholder="BASE32…",    type="password")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        if st.form_submit_button("Save & connect", use_container_width=True, type="primary"):
+        if st.form_submit_button("Save & connect", width='stretch', type="primary"):
             _bootstrap()
             st.rerun()
     st.stop()
@@ -340,18 +340,18 @@ with tab_dash:
     # Manual buttons
     mb1, mb2, mb3, _ = st.columns([1, 1, 1, 3])
     with mb1:
-        if st.button("Re-login now", use_container_width=True):
+        if st.button("Re-login now", width='stretch'):
             sched = st.session_state.get("scheduler")
             if sched:
                 clear_all_caches()
                 sched.trigger_login_now()
                 st.toast("Login started (check Code Log in 10s)")
     with mb2:
-        if st.button("Clear cache", use_container_width=True):
+        if st.button("Clear cache", width='stretch'):
             clear_all_caches()
             st.toast("Cache cleared.")
     with mb3:
-        if st.button("↻ Refresh", use_container_width=True):
+        if st.button("↻ Refresh", width='stretch'):
             st.rerun()
 
     # ── Engine controls ───────────────────────────────────────────────────────
@@ -374,28 +374,40 @@ with tab_dash:
     b1, b2, b3, _ = st.columns([1, 1, 1.2, 3])
 
     with b1:
-        if st.button("▶ Start", use_container_width=True,
+        if st.button("▶ Start", width='stretch',
                      disabled=(not engine) or eng_running or not st.session_state.algo_expiry):
+            import logging
+            logging.info(f"START BUTTON CLICKED - engine={engine}, expiry={st.session_state.algo_expiry}")
             engine.expiry     = st.session_state.algo_expiry
             engine.index      = st.session_state.algo_index
             engine.lots       = st.session_state.algo_lots
             engine.pe_offset  = st.session_state.algo_pe_offset
             engine.ce_offset  = st.session_state.algo_ce_offset
             engine.paper_mode = st.session_state.algo_paper_mode
+            logging.info("About to call engine.start()")
             engine.start()
+            logging.info("engine.start() completed")
             st.rerun()
 
     with b2:
-        if st.button("⏹ Stop", use_container_width=True,
+        if st.button("⏹ Stop", width='stretch',
                      disabled=(not engine) or not eng_running):
             engine.stop()
             st.rerun()
 
     with b3:
-        if st.button("↺ Apply config", use_container_width=True,
+        if st.button("↺ Apply config", width='stretch',
                      help="Push config changes to running engine"):
             if engine:
                 engine.index      = st.session_state.algo_index
+
+                # Also update broker connections if they were refreshed
+                if fyers:
+                    engine.fyers = fyers
+                if broker:
+                    engine.broker = broker
+                st.success("Config + connections updated")
+              
                 engine.lots       = st.session_state.algo_lots
                 engine.pe_offset  = st.session_state.algo_pe_offset
                 engine.ce_offset  = st.session_state.algo_ce_offset
@@ -459,7 +471,7 @@ with tab_dash:
             for c in ["open","high","low","close"]:
                 show[c] = show[c].round(2)
             st.dataframe(show[["datetime","open","high","low","close"]],
-                         use_container_width=True, height=260, hide_index=True)
+                         width='stretch', height=260, hide_index=True)
         else:
             st.caption("Waiting for tick data…")
     else:
@@ -567,7 +579,7 @@ with tab_log:
     level_filter = lc1.selectbox("Level", LOG_LEVELS, label_visibility="collapsed")
     search_term  = lc2.text_input("Search", placeholder="Search messages…",
                                   label_visibility="collapsed")
-    if lc3.button("Clear log", use_container_width=True):
+    if lc3.button("Clear log", width='stretch'):
         st.session_state.sched_log = []
         if engine:
             engine.log = []
@@ -609,7 +621,7 @@ with tab_log:
 
         st.dataframe(
             df_log.style.apply(_style, axis=1),
-            use_container_width=True,
+            width='stretch',
             height=520,
             hide_index=True,
         )
@@ -662,14 +674,14 @@ with tab_codelog:
                                    value=200, step=50, label_visibility="collapsed")
     search_code = cl2.text_input("Search", placeholder="filter...",
                                  label_visibility="collapsed", key="code_log_search")
-    if cl3.button("Clear", use_container_width=True):
+    if cl3.button("Clear", width='stretch'):
         LOG_FILE.write_text("")
         st.toast("Log cleared.")
         st.rerun()
     if LOG_FILE.exists() and LOG_FILE.stat().st_size > 0:
         cl4.download_button("Download", data=LOG_FILE.read_bytes(),
                             file_name="algo.log", mime="text/plain",
-                            use_container_width=True)
+                            width='stretch')
 
     # Display
     if LOG_FILE.exists() and LOG_FILE.stat().st_size > 0:
