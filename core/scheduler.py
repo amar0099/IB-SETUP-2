@@ -185,7 +185,13 @@ class DailyScheduler:
             engine.paper_mode = True
             self.engine = engine
             self._log("INFO", f"Engine created: {engine}")
-            
+
+            # ✅ ADD THIS — start feed right after login, don't wait for 9:15
+            try:
+                fyers.start_feed([engine.index])
+                self._log("INFO", "Fyers feed started after login.")
+            except Exception as e:
+                self._log("ERROR", f"Feed start failed: {e}")
             self._on_login_success(fyers, broker)
 
         except Exception as e:

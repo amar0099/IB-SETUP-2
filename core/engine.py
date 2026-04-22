@@ -24,8 +24,8 @@ from .broker     import ZerodhaClient, LOT_SIZE, EXCHANGE
 from .fyers_feed import FyersFeed
 
 IST          = pytz.timezone("Asia/Kolkata")
-MARKET_OPEN  = time(9, 15)
-MARKET_CLOSE = time(15, 30)
+MARKET_OPEN  = time(0, 0)
+MARKET_CLOSE = time(0, 0)
 POLL_INTERVAL = 10   # seconds between engine ticks
 
 
@@ -67,14 +67,22 @@ class AlgoEngine:
     def start(self):
         if self._thread and self._thread.is_alive():
             return
-        self.fyers.start_feed([self.index])
+
+        try:
+            self.fyers.set_log_callback(self._log)
+            self.fyers.start_feed([self.index])
+            self._log("INFO", f"Fyers REST feed started for {self.index}")
+        except Exception as e:
+            self._log("ERROR", f"Fyers feed failed to start: {e}")
+
         self._stop_flag.clear()
         self._thread = threading.Thread(
             target=self._loop, daemon=True, name="AlgoEngine"
         )
         self._thread.start()
         self._log("INFO",
-            f"Algo started | data: Fyers WS | orders: Zerodha | {self.index}")
+            f"Algo started | data: Fyers REST | orders: Zerodha | {self.index}")
+
 
     def stop(self):
         self._stop_flag.set()
@@ -99,9 +107,23 @@ class AlgoEngine:
                     continue
 
                 if not self.fyers.connected:
-                    self._log("INFO", "Waiting for Fyers WS feed…")
+                    self._log("INFO", "Waiting for Fyers REST feed…")
                     time_mod.sleep(5)
                     continue
+
+                # Diagnostic: log LTP every 30s so we know data is flowing
+                ltp = self.fyers.get_ltp(self.index)
+                if not hasattr(self, '_last_ltp_log'):
+                    self._last_ltp_log = 0
+                import time as _t2
+                if _t2.time() - self._last_ltp_log > 30:
+                    self._last_ltp_log = _t2.time()
+                    df_1m = self.fyers.get_candles(self.index, 1, include_partial=True)
+                    self._log("INFO",
+                        f"Feed check — LTP: {ltp or 'None'} | "
+                        f"1m candles: {len(df_1m)} | "
+                        f"connected: {self.fyers.connected}"
+                    )
 
                 self._tick(now)
             except Exception as e:
