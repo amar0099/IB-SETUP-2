@@ -71,12 +71,11 @@ class AlgoEngine:
         self._engine_thread = None
 
     def _log(self, level: str, msg: str):
-        ts = datetime.now(IST).strftime("%H:%M:%S")
-        line = f"{ts} [{level:7}] {msg}"
-        self.log.append(line)
+        ts = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        self.log.append({"time": ts, "level": level, "msg": msg})
         if len(self.log) > 500:
             self.log = self.log[-500:]
-        print(line)
+        print(f"{ts} [{level:7}] {msg}")
 
     @property
     def running(self) -> bool:
