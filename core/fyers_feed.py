@@ -137,18 +137,23 @@ class FyersFeed:
         return (self._poll_thread is not None) and self._poll_thread.is_alive()
 
     # ── Feed (REST polling) ───────────────────────────────────────────────────
-
+    
     def start_feed(self, indices: list[str]):
-        """Start REST polling thread. Safe to call multiple times."""
-        if self._poll_thread and self._poll_thread.is_alive():
-            return
-        self._stop_flag.clear()
+        """Start REST polling thread. Safe to call multiple times;
+        updates tracked indices even if thread already running."""
+        # Always refresh tracked indices (so symbol switch takes effect)
         self._tracked_indices = [i for i in indices if i in FYERS_SYMBOLS]
+
+        if self._poll_thread and self._poll_thread.is_alive():
+            self._log("INFO", f"Feed already running — updated symbols to {self._tracked_indices}")
+            return
+
+        self._stop_flag.clear()
         self._poll_thread = threading.Thread(
             target=self._run_rest_poll, daemon=True, name="FyersREST"
         )
         self._poll_thread.start()
-        self._connected = True   # Mark connected immediately — thread is running
+        self._connected = True
         print(f"[FYERS REST] Poll thread started for {self._tracked_indices}")
 
     def stop_feed(self):
