@@ -95,6 +95,36 @@ class AlgoEngine:
         """Stop engine."""
         self._running = False
 
+    def status_summary(self) -> dict:
+        """Return current status for live dashboard."""
+        if self.active_trade:
+            signal = self.active_trade.signal.direction
+            position = f"{signal} @ {self.active_trade.entry_price}"
+        elif self.active_setup:
+            signal = "Watching"
+            position = f"Setup: {self.active_setup.mother_low}–{self.active_setup.mother_high}"
+        else:
+            signal = "Idle"
+            position = "—"
+
+        try:
+            ltp = self.fyers.kite.quote(f"NSE:{self._get_index_symbol()}")["last_price"] if hasattr(self.fyers, 'kite') else "—"
+        except:
+            ltp = "—"
+
+        return {
+            "signal": signal,
+            "position": position,
+            "ltp": f"{ltp:.2f}" if isinstance(ltp, (int, float)) else ltp,
+            "ema20": f"{self._ema20:.2f}" if self._ema20 else "—",
+            "sl_hits": self.sl_hits_today,
+        }
+
+    def _get_index_symbol(self) -> str:
+        """Map index to NSE symbol."""
+        mapping = {"NIFTY": "NIFTY 50", "BANKNIFTY": "NIFTY BANK"}
+        return mapping.get(self.index, "NIFTY 50")
+
     def run(self):
         """Main loop."""
         if not self.index:
