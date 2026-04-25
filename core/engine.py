@@ -9,9 +9,9 @@ import pytz
 
 from core.strategy import (
     detect_setups, check_breakout, build_trade_params,
-    compute_ema20, Setup, Signal,
+    compute_ema20, Setup, Signal, Trade,
 )
-from core.broker import INSTRUMENTS, MARGIN
+from core.broker import INDEX_NFO_ROOT, EXCHANGE, LOT_SIZE
 
 IST = pytz.timezone("Asia/Kolkata")
 POLL_INTERVAL = 0.5  # seconds between _tick calls (fast response once setup found)
@@ -216,14 +216,27 @@ class Engine:
             return
 
         strike = self._get_atm_strike(entry_price, signal.direction)
-        symbol = INSTRUMENTS[self.index][signal.direction].format(strike=strike)
+        opt_type = "CE" if signal.direction == "LONG" else "PE"
+        
+        # Get option symbol from Zerodha instruments
+        try:
+            expiry = self.expiry
+            symbol = self.broker.get_option_symbol(self.index, expiry, strike, opt_type)
+            if not symbol:
+                self._log("ERROR", f"No option symbol for {self.index} {strike} {opt_type}")
+                return
+        except Exception as e:
+            self._log("ERROR", f"Symbol lookup: {e}")
+            return
+
+        exchange = EXCHANGE[self.index]
+        qty = LOT_SIZE[self.index] * self.lots
 
         self._log("ENTRY", f"{signal.direction} @ {entry_price} | SL {sl} | TGT {target} | strike {strike}")
 
         if not self.paper_mode:
             try:
-                order_id = self.broker.place_order(symbol, signal.direction, self.lots)
-                from core.strategy import Trade
+                order_id = self.broker.sell_option(symbol, exchange, qty)
                 self.active_trade = Trade(
                     signal=signal, index=self.index, entry_price=entry_price,
                     sl=sl, target=target, risk=risk, option_symbol=symbol,
@@ -232,7 +245,6 @@ class Engine:
             except Exception as e:
                 self._log("ERROR", f"Order placement: {e}")
         else:
-            from core.strategy import Trade
             self.active_trade = Trade(
                 signal=signal, index=self.index, entry_price=entry_price,
                 sl=sl, target=target, risk=risk, option_symbol=symbol,
