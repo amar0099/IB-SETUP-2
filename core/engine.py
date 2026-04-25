@@ -65,6 +65,10 @@ class AlgoEngine:
         # Logs
         self.logs = []
         self._log_lock = None
+        
+        # Thread control
+        self._running = False
+        self._engine_thread = None
 
     def _log(self, level: str, msg: str):
         ts = datetime.now(IST).strftime("%H:%M:%S")
@@ -74,6 +78,23 @@ class AlgoEngine:
             self.logs = self.logs[-500:]
         print(line)
 
+    @property
+    def running(self) -> bool:
+        return self._running
+
+    def start(self):
+        """Start engine in background thread."""
+        if self._running:
+            return
+        self._running = True
+        import threading
+        self._engine_thread = threading.Thread(target=self.run, daemon=True, name="AlgoEngine")
+        self._engine_thread.start()
+
+    def stop(self):
+        """Stop engine."""
+        self._running = False
+
     def run(self):
         """Main loop."""
         if not self.index:
@@ -82,7 +103,7 @@ class AlgoEngine:
             
         self._log("INFO", f"Algo started | data: Fyers REST | orders: Zerodha | {self.index}")
 
-        while True:
+        while self._running:
             try:
                 now = datetime.now(IST)
 
@@ -109,6 +130,9 @@ class AlgoEngine:
             except Exception as e:
                 self._log("ERROR", str(e))
                 time_mod.sleep(1)
+        
+        self._log("INFO", "Algo stopped")
+        self._running = False
 
     def _monitor_15m(self, now: datetime):
         """
