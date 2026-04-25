@@ -215,8 +215,18 @@ class FyersFeed:
                 time_mod.sleep(min(consecutive_errors * 2, 30))
                 continue
 
-            time_mod.sleep(1)
-
+            # Detect quota/rate-limit errors
+            if isinstance(data, dict):
+                msg = data.get("message", "").lower()
+                code = data.get("code", 0)
+                if "quota" in msg or code in (-460, -461):
+                    self._log("WARNING", "Fyers quota limit — backing off to 5s")
+                    time_mod.sleep(5)
+                else:
+                    time_mod.sleep(1.5)  # Increased from 1s to reduce quota hits
+            else:
+                time_mod.sleep(1.5)
+ 
         self._log("INFO", "REST poll thread stopped")
         self._connected = False
 
