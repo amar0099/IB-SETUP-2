@@ -63,7 +63,7 @@ class AlgoEngine:
         self.expiry = None
 
         # Logs
-        self.logs = []
+        self.log = []
         self._log_lock = None
         
         # Thread control
@@ -73,9 +73,9 @@ class AlgoEngine:
     def _log(self, level: str, msg: str):
         ts = datetime.now(IST).strftime("%H:%M:%S")
         line = f"{ts} [{level:7}] {msg}"
-        self.logs.append(line)
-        if len(self.logs) > 500:
-            self.logs = self.logs[-500:]
+        self.log.append(line)
+        if len(self.log) > 500:
+            self.log = self.log[-500:]
         print(line)
 
     @property
