@@ -32,14 +32,14 @@ def _setup_id(s: Setup) -> tuple:
     return (s.mother_high, s.mother_low, s.baby_close_time)
 
 
-class Engine:
+class AlgoEngine:
     """
     State machine:
       MONITOR_15M → (inside bar found) → MONITOR_1M → (entry or expires) → MONITOR_15M
     """
 
-    def __init__(self, index: str, fyers, broker):
-        self.index = index
+    def __init__(self, fyers, broker):
+        self.index = None  # set by app
         self.fyers = fyers
         self.broker = broker
 
@@ -76,6 +76,10 @@ class Engine:
 
     def run(self):
         """Main loop."""
+        if not self.index:
+            self._log("ERROR", "Index not set — cannot start")
+            return
+            
         self._log("INFO", f"Algo started | data: Fyers REST | orders: Zerodha | {self.index}")
 
         while True:
