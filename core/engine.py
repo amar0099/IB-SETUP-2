@@ -169,17 +169,24 @@ class AlgoEngine:
     def _refresh_setup(self):
         df_15m = self.fyers.get_candles(self.index, 15)
         if df_15m.empty:
+            self._log("DEBUG", "No 15m candles available yet")
             return
+        
+        self._log("DEBUG", f"15m candles: {len(df_15m)} rows, last 3: {df_15m[['datetime','open','high','low','close']].tail(3).to_dict('records')}")
+        
         setups = detect_setups(df_15m, self.index)
         if not setups:
+            self._log("DEBUG", f"No setups detected from {len(df_15m)} candles")
             return
+        
         candidate = setups[-1]
         if (self.active_setup is None or
                 _setup_id(candidate) != _setup_id(self.active_setup)):
             self.active_setup = candidate
             self._log("SETUP", (
                 f"Inside bar | mother {candidate.mother_low}–"
-                f"{candidate.mother_high} ({candidate.range_pts} pts)"
+                f"{candidate.mother_high} ({candidate.range_pts} pts) | "
+                f"baby close: {candidate.baby_close_time}"
             ))
 
     # ── EMA refresh ──────────────────────────────────────────────
