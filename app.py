@@ -406,15 +406,22 @@ with tab_dash:
                     engine.fyers = fyers
                 if broker:
                     engine.broker = broker
-                st.success("Config + connections updated")
-              
+
                 engine.lots       = st.session_state.algo_lots
                 engine.pe_offset  = st.session_state.algo_pe_offset
                 engine.ce_offset  = st.session_state.algo_ce_offset
                 engine.paper_mode = st.session_state.algo_paper_mode
                 if st.session_state.algo_expiry:
                     engine.expiry = st.session_state.algo_expiry
-                st.toast("Config applied.")
+
+                # Re-subscribe feed to the (possibly new) symbol
+                if fyers:
+                    try:
+                        fyers.start_feed([engine.index])
+                    except Exception as e:
+                        st.warning(f"Feed re-subscribe failed: {e}")
+
+                st.toast(f"Config applied — feed now tracking {engine.index}")
 
     eng_color = "green" if eng_running else "red"
     eng_txt   = "● Running" if eng_running else "○ Stopped"
