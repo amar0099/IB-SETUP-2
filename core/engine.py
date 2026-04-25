@@ -163,12 +163,17 @@ class AlgoEngine:
         
         self._log("INFO", "Algo stopped")
         self._running = False
+        self.fyers.stop_feed()
 
     def _monitor_15m(self, now: datetime):
         """
         Check for inside bar setups every 15 minutes.
         Only check at :16, :31, :46, :01 past the hour (1 min after 15m candle closes).
         """
+        # Stop polling during MONITOR_15M to save quota
+        if self.fyers._connected:
+            self.fyers.stop_feed()
+
         # Only check every 15 min, 1 min after candle close
         minute = now.minute
         check_minutes = [16, 31, 46, 1]  # (9:31, 9:46, 10:01, 10:16 → checks 9:30, 9:45, 10:00, 10:15 candles)
@@ -208,6 +213,8 @@ class AlgoEngine:
             self.active_setup = candidate
             self._last_signal_id = None
             self.mode = "MONITOR_1M"
+            # Start REST polling now that setup is detected
+            self.fyers.start_feed([self.index])
             self._log("SETUP", (
                 f"🔶 Inside bar detected | mother {candidate.mother_low}–"
                 f"{candidate.mother_high} ({candidate.range_pts} pts) | "
@@ -219,6 +226,10 @@ class AlgoEngine:
         Poll 1m candles and check for breakout.
         Runs every second until breakout or 30 min window expires.
         """
+        # Ensure REST polling is running during MONITOR_1M
+        if not self.fyers._connected:
+            self.fyers.start_feed([self.index])
+
         # Check if setup window has expired
         if self.active_setup:
             elapsed_min = (now - self.active_setup.baby_close_time).total_seconds() / 60
@@ -226,6 +237,7 @@ class AlgoEngine:
                 self._log("INFO", f"Setup expired (>{BREAKOUT_WINDOW}min) — back to 15m monitor")
                 self.active_setup = None
                 self.mode = "MONITOR_15M"
+                self.fyers.stop_feed()
                 return
 
         # Get latest 1m candle
@@ -320,6 +332,8 @@ class AlgoEngine:
             self.active_trade = None
             self.active_setup = None
             self.mode = "MONITOR_15M"
+            self.fyers.stop_feed()
+
 
     def _get_atm_strike(self, spot: float, direction: str) -> int:
         from core.strategy import atm_strike
